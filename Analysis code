@@ -1,0 +1,453 @@
+
+
+#upload phyloseq object
+phyloseq <-makePhyloseqFromTreeSE(sereto_tse)
+
+phyloseq <-rarefy_even_depthphyloseq sample.size = min(sample_sumsphyloseq 
+  rngseed = FALSE, replace = TRUE, trimOTUs = TRUE, verbose = TRUE)
+phyloseq 
+
+#after  rarefreaction 7778 
+library("mia")
+sereto_tse_new<- makeTreeSummarizedExperimentFromPhyloseqphyloseq 
+sereto_tse_new  #7781 #7782
+
+
+
+
+sereto_tse_new1 <- subsetByPrevalentTaxa(sereto_tse_new , detection =  0.001/100, prevalence = 10/100, as_relative = TRUE) 
+sereto_tse_new1  #2400  # NEW 2372 #2381 #2376 #2369  #2407 #2385
+
+sereto_tse_new_phyloseq1 <-makePhyloseqFromTreeSE(sereto_tse_new1)
+
+
+#CEHCK THE GROUP
+sereto_tse_new1$Group %>% table()
+
+
+
+# Load ggplot2 for visualization
+library(ggplot2)
+
+# Compute Alpha Diversity Measures (Observed, Shannon, Inverse Simpson, Chao1)
+alpha_div <- estimate_richness(pseq, measures = c("Shannon", "InvSimpson", "Chao1"))
+
+# Add sample metadata
+sample_data_df <- data.frame(sample_data(pseq))
+alpha_div <- cbind(sample_data_df, alpha_div)
+
+# View the first few rows of the alpha diversity data
+head(alpha_div)
+# Load necessary library
+library(ggplot2)
+
+# Define the color palette for boxplot fill
+custom_colors <- c("gray", "lightblue", "green", "pink", "orange", "red")
+
+# Plot for Shannon Diversity with black dots inside
+ggplot(alpha_div, aes(x = Group, y = Shannon, fill = Group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, size = 2, color = "black", alpha = 0.7) +  # Add black dots
+  scale_fill_manual(values = custom_colors) +  # Apply custom colors to boxplot
+  theme_minimal() +
+  labs(title = "Shannon Diversity Index by Group", x = "Group", y = "Shannon Index") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Plot for Inverse Simpson Diversity with black dots inside
+ggplot(alpha_div, aes(x = Group, y = InvSimpson, fill = Group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, size = 2, color = "black", alpha = 0.7) +  # Add black dots
+  scale_fill_manual(values = custom_colors) +  # Apply custom colors to boxplot
+  theme_minimal() +
+  labs(title = "Inverse Simpson Diversity Index by Group", x = "Group", y = "Inverse Simpson Index") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# Plot for Chao1 Index with black dots inside
+ggplot(alpha_div, aes(x = Group, y = Chao1, fill = Group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, size = 2, color = "black", alpha = 0.7) +  # Add black dots
+  scale_fill_manual(values = custom_colors) +  # Apply custom colors to boxplot
+  theme_minimal() +
+  labs(title = "Chao1 Richness Index by Group", x = "Group", y = "Chao1 Index") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+# Check normality for Shannon Diversity
+shapiro.test(alpha_div$Shannon)
+
+# Check normality for Inverse Simpson Diversity
+shapiro.test(alpha_div$InvSimpson)
+
+# Check normality for Chao1 Diversity
+shapiro.test(alpha_div$Chao1)
+
+
+
+
+
+# Perform ANOVA for Shannon Diversity
+anova_shannon <- aov(Shannon ~ Group, data = alpha_div)
+summary(anova_shannon)
+
+
+# Tukey's HSD post-hoc test for Shannon Diversity
+tukey_shannon <- TukeyHSD(anova_shannon)
+summary(tukey_shannon)
+
+
+# Install the "dunn.test" package if necessary
+# install.packages("dunn.test")
+
+# Load the dunn.test package
+library(dunn.test)
+
+# Dunn's test for Inverse Simpson
+dunn_inv_simpson <- dunn.test(alpha_div$InvSimpson, alpha_div$Group, kw = TRUE, label = TRUE)
+
+# Dunn's test for Chao1
+dunn_chao1 <- dunn.test(alpha_div$Chao1, alpha_div$Group, kw = TRUE, label = TRUE)
+
+
+
+#beta diversity
+
+pseq_genus <- tax_glom(pseq, taxrank = "Genus")
+
+# Species level
+pseq_species <- tax_glom(pseq, taxrank = "Species")
+
+# Load phyloseq
+library(phyloseq)
+
+# Compute Bray-Curtis distance at genus level
+bray_genus <- phyloseq::distance(pseq_genus, method = "bray")
+
+# Compute Bray-Curtis distance at species level
+bray_species <- phyloseq::distance(pseq_species, method = "bray")
+
+# Compute Jaccard distance at genus level
+jaccard_genus <- phyloseq::distance(pseq_genus, method = "jaccard")
+
+# Compute Jaccard distance at species level
+jaccard_species <- phyloseq::distance(pseq_species, method = "jaccard")
+
+
+library(vegan)
+
+# Make sure sample_data is a data frame
+meta <- as(sample_data(pseq_genus), "data.frame")
+
+# PERMANOVA for Bray-Curtis (genus level)
+permanova_bray_genus <- adonis2(bray_genus ~ Group, data = meta)
+print(permanova_bray_genus)
+
+# PERMANOVA for Jaccard (genus level)
+permanova_jaccard_genus <- adonis2(jaccard_genus ~ Group, data = meta)
+print(permanova_jaccard_genus)
+
+custom_colors <- c("gray", "lightblue", "green", "pink", "orange", "red")
+
+# PCoA for Bray-Curtis (genus level)
+ordination_bray_genus <- ordinate(pseq_genus, method = "PCoA", distance = "bray")
+
+# PCoA plot with custom colors and ellipses
+plot_ordination(pseq_genus, ordination_bray_genus, color = "Group") +
+  geom_point(size = 3, alpha = 0.7) +
+  stat_ellipse(type = "t", linetype = 1, size = 1) +
+  scale_color_manual(values = custom_colors) +
+  theme_minimal() +
+  labs(title = "PCoA - Bray-Curtis (Genus Level)", color = "Group")
+
+custom_colors <- c("gray", "lightblue", "green", "pink", "orange", "red")
+# PCoA for Bray-Curtis (genus level)
+ordination_bray_genus <- ordinate(pseq_genus, method = "PCoA", distance = "jaccard")
+
+# PCoA plot with custom colors and ellipses
+plot_ordination(pseq_genus, ordination_bray_genus, color = "Group") +
+  geom_point(size = 3, alpha = 0.7) +
+  stat_ellipse(type = "t", linetype = 1, size = 1) +
+  scale_color_manual(values = custom_colors) +
+  theme_minimal() +
+  labs(title = "PCoA - jaccard (Genus Level)", color = "Group")
+
+
+
+# Make sure sample_data is a data frame
+meta <- as(sample_data(pseq_species), "data.frame")
+
+# PERMANOVA for Bray-Curtis (genus level)
+permanova_bray_species <- adonis2(bray_species ~ Group, data = meta)
+print(permanova_bray_species)
+
+# PERMANOVA for Jaccard (genus level)
+permanova_jaccard_species <- adonis2(jaccard_species ~ Group, data = meta)
+print(permanova_jaccard_species)
+
+
+custom_colors <- c("gray", "lightblue", "green", "pink", "orange", "red")
+
+# PCoA for Bray-Curtis (genus level)
+ordination_bray_species <- ordinate(pseq_species, method = "PCoA", distance = "bray")
+
+# PCoA plot with custom colors and ellipses
+plot_ordination(pseq_species, ordination_bray_species, color = "Group") +
+  geom_point(size = 3, alpha = 0.7) +
+  stat_ellipse(type = "t", linetype = 1, size = 1) +
+  scale_color_manual(values = custom_colors) +
+  theme_minimal() +
+  labs(title = "PCoA - Bray-Curtis (Species Level)", color = "Group")
+
+custom_colors <- c("gray", "lightblue", "green", "pink", "orange", "red")
+# PCoA for Bray-Curtis (genus level)
+ordination_jaccard_species <- ordinate(pseq_species, method = "PCoA", distance = "jaccard")
+
+# PCoA plot with custom colors and ellipses
+plot_ordination(pseq_species, ordination_jaccard_species, color = "Group") +
+  geom_point(size = 3, alpha = 0.7) +
+  stat_ellipse(type = "t", linetype = 1, size = 1) +
+  scale_color_manual(values = custom_colors) +
+  theme_minimal() +
+  labs(title = "PCoA - jaccard (Species Level)", color = "Group")
+
+
+
+library(pairwiseAdonis)
+
+# Calculate Bray-Curtis distance for species level
+bray_species <- phyloseq::distance(pseq_species, method = "bray")
+
+# Extract metadata
+metadata <- as(sample_data(pseq_species), "data.frame")
+
+# Run pairwise PERMANOVA
+pairwise_results <- pairwise.adonis2(bray_species ~ Group, data = metadata)
+
+# View results
+print(pairwise_results)
+# Save pairwise PERMANOVA results to CSV
+write.csv(pairwise_results, file = "pairwise_permanova_species_bray.csv", row.names = FALSE)
+
+
+
+
+
+library(pairwiseAdonis)
+
+# Calculate Bray-Curtis distance for species level
+bray_species <- phyloseq::distance(pseq_species, method = "jaccard")
+
+# Extract metadata
+metadata <- as(sample_data(pseq_species), "data.frame")
+
+# Run pairwise PERMANOVA
+pairwise_results <- pairwise.adonis2(bray_species ~ Group, data = metadata)
+
+# View results
+print(pairwise_results)
+# Save pairwise PERMANOVA results to CSV
+write.csv(pairwise_results, file = "pairwise_permanova_species_jaccard.csv", row.names = FALSE)
+
+
+
+
+permanova_jaccard_species_adj <- adonis2(
+  jaccard_species ~ Group + AGE+GENDER +SMOKING_EVER+X3M_ANTIBIOTICS,
+  data = meta
+)
+
+print(permanova_jaccard_species_adj)
+
+
+
+permanova_bray_species_adj <- adonis2(
+  bray_species ~ Group + AGE+GENDER +SMOKING_EVER+X3M_ANTIBIOTICS,
+  data = meta
+)
+
+print(permanova_bray_species_adj)
+
+
+
+# Step 1: Transform sample counts to relative abundance
+pseq_rel <- transform_sample_counts(pseq, function(x) x / sum(x))
+
+# Step 2: Collapse by Phylum level
+pseq_phylum <- tax_glom(pseq_rel, taxrank = "Phylum")
+
+# Step 3: Convert to a data frame
+otu_data <- psmelt(pseq_phylum)
+
+# Step 4: Remove Chordata phylum
+otu_data <- otu_data %>% filter(Phylum != "Chordata")
+
+# Step 5: Calculate total abundance and select top 10 phyla
+top_phyla <- otu_data %>%
+  group_by(Phylum) %>%
+  summarise(Total_Abundance = sum(Abundance), .groups = 'drop') %>%
+  top_n(10, Total_Abundance) %>%
+  pull(Phylum)
+
+# Group the remaining phyla as "Others"
+otu_data$Phylum <- ifelse(otu_data$Phylum %in% top_phyla, otu_data$Phylum, "Others")
+
+# Step 6: Calculate total abundance for all phyla (including "Others")
+phyla_order <- otu_data %>%
+  group_by(Phylum) %>%
+  summarise(Total_Abundance = sum(Abundance), .groups = 'drop') %>%
+  arrange(desc(Total_Abundance)) %>%
+  pull(Phylum)
+
+# Ensure "Others" is always last in the factor levels
+phyla_order <- c(setdiff(phyla_order, "Others"), "Others")
+
+# Step 7: Reorder phyla within each group by total abundance, placing "Others" last
+otu_data$Phylum <- factor(otu_data$Phylum, levels = phyla_order)
+
+# Step 8: Generate the stacked bar plot with phyla ordered by abundance, scaled to 100%
+ggplot(otu_data, aes(x = Group, y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity", position = "fill") +  # Use 'fill' to scale bars to 100%
+  theme_minimal() +
+  labs(x = "Periodontal Groups", y = "Relative Abundance (%)", fill = "Phylum") +
+  scale_fill_manual(values = c(
+    "red", "blue", "green", "purple", "orange", "grey", "pink", "cyan", "brown", "yellow", "lightgreen"
+  )) +  # Manually specify 11 colors
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Step 1: Calculate mean and SD of relative abundance for each Phylum within each Group
+otu_stats <- otu_data %>%
+  group_by(Group, Phylum) %>%
+  summarise(
+    Mean_Abundance = mean(Abundance),
+    SD_Abundance = sd(Abundance),
+    .groups = 'drop'
+  )
+
+# View the result
+print(otu_stats)
+
+write.csv(otu_stats, "phylum_Groups1.csv", row.names = FALSE)
+
+# Step 1: Perform ANOVA for each Phylum
+otu_stats <- otu_data %>%
+  group_by(Phylum) %>%
+  summarise(
+    # Perform ANOVA and store the result
+    anova_result = list(summary(aov(Abundance ~ Group))[[1]]),
+    .groups = 'drop'
+  )
+
+# Step 2: Extract p-values from the ANOVA summary
+otu_stats <- otu_stats %>%
+  mutate(anova_p = sapply(anova_result, function(x) x["Group", "Pr(>F)"][1])) %>%
+  ungroup() %>%  # Ungroup to handle columns properly
+  mutate(anova_p = as.numeric(anova_p))  # Ensure the p-value is numeric
+
+# Step 3: Print the result with Phylum and ANOVA p-values
+print(otu_stats)
+
+
+#genus plot
+# Step 1: Normalize the data to relative abundance
+pseq_rel <- transform_sample_counts(pseq, function(x) x / sum(x))
+
+# Step 2: Collapse by Genus level
+pseq_genus <- tax_glom(pseq_rel, taxrank = "Genus")
+
+# Step 3: Convert to a data frame
+otu_data <- psmelt(pseq_genus)
+
+# Step 4: Remove "Chordata" genus (if applicable)
+otu_data <- otu_data %>% filter(Genus != "Chordata")
+
+# Step 5: Calculate total abundance and select top 15 genera
+top_genera <- otu_data %>%
+  group_by(Genus) %>%
+  summarise(Total_Abundance = sum(Abundance), .groups = 'drop') %>%
+  top_n(15, Total_Abundance) %>%
+  pull(Genus)
+
+# Group the remaining genera as "Others"
+otu_data$Genus <- ifelse(otu_data$Genus %in% top_genera, otu_data$Genus, "Others")
+
+# Step 6: Calculate total abundance for all genera (including "Others")
+genus_order <- otu_data %>%
+  group_by(Genus) %>%
+  summarise(Total_Abundance = sum(Abundance), .groups = 'drop') %>%
+  arrange(desc(Total_Abundance)) %>%
+  pull(Genus)
+
+# Ensure "Others" is always last in the factor levels
+genus_order <- c(setdiff(genus_order, "Others"), "Others")
+
+# Step 7: Reorder genera within each group by total abundance, placing "Others" last
+otu_data$Genus <- factor(otu_data$Genus, levels = genus_order)
+
+# Step 8: Generate the stacked bar plot with genera ordered by abundance, scaled to 100%
+ggplot(otu_data, aes(x = Group, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity", position = "fill") +  # Use 'fill' to scale bars to 100%
+  theme_minimal() +
+  labs(x = "Periodontal Groups", y = "Relative Abundance (%)", fill = "Genus") +
+  scale_fill_manual(values = c(
+    "red", "blue", "green", "purple", "orange", "grey", "pink", "cyan", "brown", "yellow", "lightgreen",
+    "magenta", "black", "beige", "lavender", "turquoise"
+  )) +  # Manually specify 15 colors
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#alluvial phyla
+library(dplyr)
+library(ggplot2)
+library(ggalluvial)
+
+library(dplyr)
+library(ggplot2)
+library(ggalluvial)
+
+# Step 1: Filter out Chordata and compute top 6 phyla
+top_phyla <- otu_data %>%
+  filter(Phylum != "Chordata") %>%
+  group_by(Phylum) %>%
+  summarise(Total_Abundance = sum(Abundance), .groups = 'drop') %>%
+  arrange(desc(Total_Abundance)) %>%
+  slice_head(n = 6) %>%
+  pull(Phylum)
+
+# Step 2: Filter original data to keep only top 6 phyla
+otu_data_top6_phylum <- otu_data %>%
+  filter(Phylum %in% top_phyla)
+
+# Step 3: Summarize data by Group and Phylum
+otu_data_phylum_summary <- otu_data_top6_phylum %>%
+  group_by(Group, Phylum) %>%
+  summarise(Mean_Abundance = mean(Abundance), .groups = 'drop')
+
+# Step 4: Define color palette for 6 phyla
+phylum_colors <- c("red", "blue", "green", "purple", "orange", "grey")
+
+# Step 5: Alluvial plot with updated phyla and colors
+ggplot(otu_data_phylum_summary,
+       aes(axis1 = Group, axis2 = Phylum, y = Mean_Abundance)) +
+  geom_alluvium(aes(fill = Phylum), width = 1/12, alpha = 0.8) +
+  geom_stratum(width = 1/12, fill = "grey90", color = "black") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
+  scale_fill_manual(values = phylum_colors) +
+  theme_minimal() +
+  labs(x = "Group → Phylum", y = "Mean Relative Abundance", 
+       title = "Alluvial Plot of Top 6 Phyla Across Groups") +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
